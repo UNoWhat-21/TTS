@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Final TTS App</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    padding: 30px;
+}
+
+textarea {
+    width: 80%;
+    height: 120px;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+select, input, button {
+    padding: 10px;
+    margin: 8px;
+    border-radius: 8px;
+    border: none;
+}
+
+button {
+    background: #22c55e;
+    color: white;
+    cursor: pointer;
+}
+
+#status {
+    margin-top: 15px;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🔥 Text-to-Speech App</h2>
+
+<textarea id="text">
+Hello, this is your final working text to speech app. It will not stop in between.
+</textarea><br>
+
+<select id="voiceType">
+    <option value="female">Female</option>
+    <option value="male">Male</option>
+</select>
+
+<label>Speed</label>
+<input type="range" id="speed" min="0.5" max="2" step="0.1" value="1">
+
+<label>Pitch</label>
+<input type="range" id="pitch" min="0" max="2" step="0.1" value="1">
+
+<label>Volume</label>
+<input type="range" id="volume" min="0" max="1" step="0.1" value="1">
+
+<br>
+
+<button onclick="play()">▶ Play</button>
+<button onclick="pauseSpeech()">⏸ Pause</button>
+<button onclick="resumeSpeech()">▶ Resume</button>
+<button onclick="stopSpeech()">⏹ Stop</button>
+
+<br>
+
+<button onclick="generate()">💾 Generate & Download Audio</button>
+
+<br><br>
+
+<audio id="audio" controls></audio>
+
+<div id="status">Status: Ready</div>
+
+<script>
+let synth = window.speechSynthesis;
+let voices = [];
+let chunks = [];
+let currentIndex = 0;
+let isPaused = false;
+
+// Load voices
+function loadVoices() {
+    voices = synth.getVoices();
+}
+speechSynthesis.onvoiceschanged = loadVoices;
+setTimeout(loadVoices, 500);
+
+// Split text into chunks
+function splitText(text) {
+    return text.match(/.{1,120}(\s|$)/g);
+}
+
+// PLAY
+function play() {
+    let text = document.getElementById("text").value;
+    let speed = document.getElementById("speed").value;
+    let pitch = document.getElementById("pitch").value;
+    let volume = document.getElementById("volume").value;
+    let type = document.getElementById("voiceType").value;
+
+    synth.cancel();
+
+    chunks = splitText(text);
+    currentIndex = 0;
+
+    speakChunk(speed, pitch, volume, type);
+}
+
+// SPEAK CHUNK
+function speakChunk(speed, pitch, volume, type) {
+    if (currentIndex >= chunks.length) {
+        updateStatus("✅ Finished");
+        return;
+    }
+
+    let utter = new SpeechSynthesisUtterance(chunks[currentIndex]);
+
+    // Voice selection
+    let selected = voices.find(v =>
+        type === "female"
+        ? v.name.toLowerCase().includes("female")
+        : v.name.toLowerCase().includes("male")
+    );
+
+    if (!selected) selected = voices.find(v => v.lang.includes("en")) || voices[0];
+
+    utter.voice = selected;
+    utter.rate = speed;
+    utter.pitch = pitch;
+    utter.volume = volume;
+
+    utter.onstart = () => updateStatus("🔊 Speaking...");
+    
+    utter.onend = () => {
+        currentIndex++;
+        speakChunk(speed, pitch, volume, type);
+    };
+
+    utter.onerror = () => updateStatus("❌ Error");
+
+    synth.speak(utter);
+}
+
+// CONTROLS
+function pauseSpeech() {
+    synth.pause();
+    updateStatus("⏸ Paused");
+}
+
+function resumeSpeech() {
+    synth.resume();
+    updateStatus("▶ Resumed");
+}
+
+function stopSpeech() {
+    synth.cancel();
+    updateStatus("⏹ Stopped");
+}
+
+// STATUS
+function updateStatus(msg) {
+    document.getElementById("status").innerText = "Status: " + msg;
+}
+
+// CLEAN AUDIO GENERATION (NO MIC)
+async function generate() {
+    let text = document.getElementById("text").value;
+
+    updateStatus("⏳ Generating audio...");
+
+    let url = `https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(text)}`;
+
+    let res = await fetch(url);
+    let blob = await res.blob();
+
+    let audioURL = URL.createObjectURL(blob);
+
+    document.getElementById("audio").src = audioURL;
+
+    let a = document.createElement("a");
+    a.href = audioURL;
+    a.download = "tts_audio.mp3";
+    a.click();
+
+    updateStatus("💾 Downloaded");
+}
+</script>
+
+</body>
+</html>
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Complete TTS App</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    padding: 30px;
+}
+
+textarea {
+    width: 80%;
+    height: 120px;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+}
+
+select, input, button {
+    padding: 10px;
+    margin: 8px;
+    border-radius: 8px;
+    border: none;
+}
+
+button {
+    background: #22c55e;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #16a34a;
+}
+
+#status {
+    margin-top: 15px;
+    font-weight: bold;
+    color: #22c55e;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🎤 Complete Text-to-Speech App</h2>
+
+<textarea id="text">Hello, this is a test voice</textarea><br>
+
+<select id="voiceList"></select><br>
+
+<label>Speed:</label>
+<input type="range" id="speed" min="0.5" max="2" step="0.1" value="1">
+
+<label>Pitch:</label>
+<input type="range" id="pitch" min="0" max="2" step="0.1" value="1">
+
+<label>Volume:</label>
+<input type="range" id="volume" min="0" max="1" step="0.1" value="1">
+
+<br>
+
+<button onclick="playSpeech()">▶ Play</button>
+<button onclick="pauseSpeech()">⏸ Pause</button>
+<button onclick="resumeSpeech()">▶ Resume</button>
+<button onclick="stopSpeech()">⏹ Stop</button>
+
+<br>
+
+<button onclick="fakeRecord()">🎙 Record</button>
+
+<div id="status">Status: Loading voices...</div>
+
+<script>
+let voices = [];
+let utterance;
+
+// Load voices
+function loadVoices() {
+    voices = speechSynthesis.getVoices();
+    let select = document.getElementById("voiceList");
+    select.innerHTML = "";
+
+    voices.forEach((voice, i) => {
+        let option = document.createElement("option");
+        option.value = i;
+        option.textContent = voice.name + " (" + voice.lang + ")";
+        select.appendChild(option);
+    });
+
+    document.getElementById("status").innerText = "Voices Loaded: " + voices.length;
+}
+
+// Some browsers need delay
+setTimeout(loadVoices, 500);
+speechSynthesis.onvoiceschanged = loadVoices;
+
+// PLAY
+function playSpeech() {
+    let text = document.getElementById("text").value;
+    let speed = document.getElementById("speed").value;
+    let pitch = document.getElementById("pitch").value;
+    let volume = document.getElementById("volume").value;
+    let voiceIndex = document.getElementById("voiceList").value;
+
+    if (!text) {
+        alert("Enter text!");
+        return;
+    }
+
+    // Stop previous
+    speechSynthesis.cancel();
+
+    utterance = new SpeechSynthesisUtterance(text);
+
+    if (voices.length > 0) {
+        utterance.voice = voices[voiceIndex];
+    }
+
+    utterance.rate = speed;
+    utterance.pitch = pitch;
+    utterance.volume = volume;
+
+    utterance.onstart = () => {
+        updateStatus("🔊 Speaking...");
+    };
+
+    utterance.onend = () => {
+        updateStatus("✅ Finished");
+    };
+
+    utterance.onerror = () => {
+        updateStatus("❌ Error");
+    };
+
+    speechSynthesis.speak(utterance);
+}
+
+// PAUSE
+function pauseSpeech() {
+    speechSynthesis.pause();
+    updateStatus("⏸ Paused");
+}
+
+// RESUME
+function resumeSpeech() {
+    speechSynthesis.resume();
+    updateStatus("▶ Resumed");
+}
+
+// STOP
+function stopSpeech() {
+    speechSynthesis.cancel();
+    updateStatus("⏹ Stopped");
+}
+
+// STATUS
+function updateStatus(msg) {
+    document.getElementById("status").innerText = "Status: " + msg;
+}
+
+// RECORD (EXPLAINED)
+function fakeRecord() {
+    alert("⚠️ Recording system voice is NOT supported directly in browser.\n\nTo enable real recording, use:\n- Google TTS API\n- ElevenLabs API\n\nTell me 'API version' and I'll build it for you.");
+}
+</script>
+
+</body>
+</html> -->
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TTS Debug App</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    padding: 30px;
+}
+textarea {
+    width: 80%;
+    height: 120px;
+    padding: 10px;
+    border-radius: 10px;
+}
+button, select, input {
+    padding: 10px;
+    margin: 10px;
+}
+#status {
+    margin-top: 15px;
+    font-weight: bold;
+    color: #22c55e;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🎤 TTS Debug Tool</h2>
+
+<textarea id="text">Hello, this is a test voice</textarea><br>
+
+<select id="voiceList"></select><br>
+
+<label>Speed:</label>
+<input type="range" id="speed" min="0.5" max="2" step="0.1" value="1">
+
+<br>
+
+<button onclick="speak()">▶ Speak</button>
+<button onclick="stopSpeech()">⏹ Stop</button>
+
+<div id="status">Status: Idle</div>
+
+<script>
+let voices = [];
+
+function loadVoices() {
+    voices = speechSynthesis.getVoices();
+    let select = document.getElementById("voiceList");
+    select.innerHTML = "";
+
+    voices.forEach((voice, i) => {
+        let option = document.createElement("option");
+        option.value = i;
+        option.textContent = voice.name;
+        select.appendChild(option);
+    });
+
+    document.getElementById("status").innerText = "Voices Loaded: " + voices.length;
+}
+
+speechSynthesis.onvoiceschanged = loadVoices;
+
+function speak() {
+    let text = document.getElementById("text").value;
+    let speed = document.getElementById("speed").value;
+    let voiceIndex = document.getElementById("voiceList").value;
+
+    if (!text) {
+        alert("Enter text first!");
+        return;
+    }
+
+    let utter = new SpeechSynthesisUtterance(text);
+
+    if (voices.length > 0) {
+        utter.voice = voices[voiceIndex];
+    }
+
+    utter.rate = speed;
+
+    utter.onstart = () => {
+        document.getElementById("status").innerText = "🔊 Speaking...";
+    };
+
+    utter.onend = () => {
+        document.getElementById("status").innerText = "✅ Finished";
+    };
+
+    utter.onerror = () => {
+        document.getElementById("status").innerText = "❌ Error occurred";
+    };
+
+    speechSynthesis.speak(utter);
+}
+
+function stopSpeech() {
+    speechSynthesis.cancel();
+    document.getElementById("status").innerText = "⏹ Stopped";
+}
+</script>
+
+</body>
+</html> -->
